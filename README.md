@@ -21,7 +21,7 @@ go get github.com/martin3zra/router
 ## Usage
 Import it:
 
-```go
+```shell script
 import (
 	"github.com/martin3zra/router"
 )
