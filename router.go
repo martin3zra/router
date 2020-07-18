@@ -1,7 +1,9 @@
 package router
 
 import (
+	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/gorilla/mux"
 )
@@ -13,6 +15,7 @@ type Middleware func(http.HandlerFunc) http.HandlerFunc
 type Routing struct {
 	Router           *mux.Router
 	routerWithPrefix *mux.Router
+	prefixes         []string
 	middleware       []Middleware
 	isGroup          bool
 }
@@ -66,14 +69,19 @@ func (r *Routing) Middleware(middleware ...Middleware) *Routing {
 func (r *Routing) compose(uri string, action http.HandlerFunc, method string, name ...string) {
 
 	//Grouping middleware
-	wrapped := http.HandlerFunc(action)
+	wrapped := action
 	for i := len(r.middleware) - 1; i >= 0; i-- {
 		wrapped = r.middleware[i](wrapped)
 	}
 
-	var route = r.Router.HandleFunc(uri, wrapped).Methods(method)
+	url := uri
+	if len(url) > 0 {
+		url = fmt.Sprintf("/%s", uri)
+	}
+
+	var route = r.Router.HandleFunc(url, wrapped).Methods(method)
 	if r.routerWithPrefix != nil {
-		route = r.routerWithPrefix.HandleFunc(uri, wrapped).Methods(method)
+		route = r.routerWithPrefix.HandleFunc(url, wrapped).Methods(method)
 	}
 
 	//If a least a name was provided, we get first one from the list and set as the Router name.
@@ -94,13 +102,20 @@ func (r *Routing) Prefix(prefix string, f func()) {
 
 	defer func() {
 		r.routerWithPrefix = nil
+		if len(r.prefixes) > 0 {
+			r.prefixes = r.prefixes[:len(r.prefixes)-1]
+		}
 	}()
 
 	if len(prefix) == 0 {
 		panic("Prefix(): the prefix can't be empty")
 	}
 
-	r.routerWithPrefix = r.Router.PathPrefix(prefix).Subrouter().StrictSlash(true)
+	r.prefixes = append(r.prefixes, prefix)
+
+	var mergePrefix = strings.Join(r.prefixes, "/")
+
+	r.routerWithPrefix = r.Router.PathPrefix(fmt.Sprintf("/%s", mergePrefix)).Subrouter().StrictSlash(true)
 	f()
 
 }
