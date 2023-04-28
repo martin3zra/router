@@ -60,6 +60,11 @@ func (r *Routing) Option(uri string, action http.HandlerFunc, name ...string) {
 	r.compose(uri, action, http.MethodOptions, name...)
 }
 
+//HandleFilesystem ...
+func (r *Routing) HandleFilesystem(uri string, handler http.Handler)  {
+	r.Router.PathPrefix(uri).Handler(handler).Methods("GET")
+}
+
 //Middleware provide a convenient mechanism for filtering HTTP requests entering your application.
 func (r *Routing) Middleware(middleware ...Middleware) *Routing {
 	r.middleware = middleware
